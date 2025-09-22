@@ -31,46 +31,52 @@ def matrix_multiply(A, B):
     return C
 
 
-# ===== TEST CODE =====
-# This block only runs if we execute this file directly: `python engine.py`
-if __name__ == "__main__":
-    print("🧠 VisuaLife Engine - Day 2 Test: Matrix Multiplication")
-    print("=======================================================")
 
-    # Test Case 1: Simple 2x2 * 2x2
-    print("\n1. Testing 2x2 * 2x2")
-    A = np.array([[1, 2],
-                  [3, 4]])
-    B = np.array([[5, 6],
-                  [7, 8]])
+def elementwise_multiply(A, B):
+    # Check if the matrices have the same shape.
+    if A.shape != B.shape:
+        raise ValueError(f"Shapes {A.shape} and {B.shape} must be identical for element-wise multiplication.")
 
-    result = matrix_multiply(A, B)
-    expected = np.array([[19, 22],
-                         [43, 50]])
+    # Initialize the output matrix with zeros.
+    result = np.zeros(A.shape)
 
-    print("Matrix A:\n", A)
-    print("Matrix B:\n", B)
-    print("Our Result:\n", result)
-    print("Expected Result:\n", expected)
-    print("✅ Test Passed:", np.allclose(result, expected))
+    # Perform element-wise multiplication using nested loops.
+    # For a 2D array, we need two loops.
+    for i in range(A.shape[0]): # Iterate over rows
+        for j in range(A.shape[1]): # Iterate over columns
+            result[i, j] = A[i, j] * B[i, j]
 
-    # Test Case 2: 3x2 * 2x3 -> should be 3x3
-    print("\n\n2. Testing 3x2 * 2x3")
-    A = np.array([[1, 2],
-                  [3, 4],
-                  [5, 6]])
-    B = np.array([[1, 2, 3],
-                  [4, 5, 6]])
+    return result
 
-    result = matrix_multiply(A, B)
-    expected = np.array([[9, 12, 15],
-                         [19, 26, 33],
-                         [29, 40, 51]])
 
-    print("Matrix A:\n", A)
-    print("Matrix B:\n", B)
-    print("Our Result:\n", result)
-    print("Expected Result:\n", expected)
-    print("✅ Test Passed:", np.allclose(result, expected))
 
-    print("\n🎉 Day 2 Complete! The foundation of the VisuaLife Engine is solid.")
+def sum_array(A, axis=None):
+    if axis is None:
+        # Sum all elements into a single scalar value.
+        total = 0.0
+        # Use a nested loop to iterate through every element
+        for i in range(A.shape[0]):
+            for j in range(A.shape[1]):
+                total += A[i, j]
+        return total
+    elif axis == 0:
+        # Sum along columns (result will be a row with shape (1, columns))
+        result = np.zeros((1, A.shape[1]))
+        for j in range(A.shape[1]): # For each column...
+            col_sum = 0.0
+            for i in range(A.shape[0]): # ...sum all rows in that column
+                col_sum += A[i, j]
+            result[0, j] = col_sum
+        return result
+    elif axis == 1:
+        # Sum along rows (result will be a column with shape (rows, 1))
+        result = np.zeros((A.shape[0], 1))
+        for i in range(A.shape[0]): # For each row...
+            row_sum = 0.0
+            for j in range(A.shape[1]): # ...sum all columns in that row
+                row_sum += A[i, j]
+            result[i, 0] = row_sum
+        return result
+    else:
+        raise ValueError("Axis must be None, 0, or 1 for 2D arrays.")
+    
