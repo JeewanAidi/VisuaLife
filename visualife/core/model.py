@@ -69,23 +69,26 @@ class Model:
         return output
 
     def backward(self, dZ):
-        """Perform backward pass and update parameters using optimizer."""
         gradient = dZ
-        
+
         # Backward pass through all layers
         for layer in reversed(self.layers):
             if hasattr(layer, 'backward'):
-                # ALWAYS pass learning_rate to maintain compatibility
-                gradient = layer.backward(gradient, self.optimizer.learning_rate)
-        
+                # Pass learning_rate ONLY if the layer has trainable parameters
+                if hasattr(layer, 'weights') or hasattr(layer, 'gamma'):
+                    gradient = layer.backward(gradient, self.optimizer.learning_rate)
+                else:
+                    gradient = layer.backward(gradient)
+
         # Update parameters using optimizer
         for layer in self.layers:
             if (hasattr(layer, 'weights') and 
                 hasattr(layer, 'dweights') and 
                 layer.dweights is not None):
                 self.optimizer.update(layer)
-        
+
         return gradient
+
 
     def compute_loss(self, y_pred, y_true):
         loss = self.loss_function.forward(y_pred, y_true)
