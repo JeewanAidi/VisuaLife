@@ -196,5 +196,5 @@ class Flatten:
         self.input_shape = X.shape
         return X.reshape(X.shape[0], -1)
     
-    def backward(self, dZ):
+    def backward(self, dZ, learning_rate=None):
         return dZ.reshape(self.input_shape)
