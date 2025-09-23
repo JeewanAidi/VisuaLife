@@ -3,7 +3,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import numpy as np
-from src.core.engine import matrix_multiply, elementwise_multiply, sum_array
+from visualife.core.engine import matrix_multiply, elementwise_multiply, sum_array
 
 if __name__ == "__main__":
     print("VisuaLife Engine - Test: Matrix Multiplication")

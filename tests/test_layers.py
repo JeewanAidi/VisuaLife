@@ -3,7 +3,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import numpy as np
-from src.core.layers import Dense
+from visualife.core.layers import Dense
 
 def test_dense_forward():
     """Test the forward pass of the Dense layer."""
@@ -55,10 +55,10 @@ def test_dense_backward():
     
     # Mock gradient from next layer
     dZ = np.array([[0.5, 1.0, 0.5]])
-    learning_rate = 0.1
+    # learning_rate = 0.1  # REMOVED: learning_rate is no longer used in backward()
     
-    # Perform backward pass
-    dX = dense_layer.backward(dZ, learning_rate)
+    # Perform backward pass (removed learning_rate parameter)
+    dX = dense_layer.backward(dZ)  # CHANGED: removed learning_rate
     
     # Manually calculate expected gradients
     # dW = X.T . dZ

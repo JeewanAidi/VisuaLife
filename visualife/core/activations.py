@@ -13,7 +13,7 @@ class ReLU:
         self.input = X
         return np.maximum(0, X)
     
-    def backward(self, dZ):
+    def backward(self, dZ, learning_rate=None):  # ADD learning_rate parameter
         return dZ * (self.input > 0)
 
 class LeakyReLU:
@@ -30,7 +30,7 @@ class LeakyReLU:
         self.input = X
         return np.where(X > 0, X, self.alpha * X)
     
-    def backward(self, dZ):
+    def backward(self, dZ, learning_rate=None):  # ADD learning_rate parameter
         return dZ * np.where(self.input > 0, 1, self.alpha)
 
 class ParametricReLU:
@@ -48,9 +48,8 @@ class ParametricReLU:
         self.input = X
         return np.where(X > 0, X, self.alpha * X)
     
-    def backward(self, dZ):
+    def backward(self, dZ, learning_rate=None):  # ADD learning_rate parameter
         return dZ * np.where(self.input > 0, 1, self.alpha)
-
 class ELU:
     """
     Exponential Linear Unit activation function.
@@ -65,7 +64,7 @@ class ELU:
         self.output = np.where(X > 0, X, self.alpha * (np.exp(X) - 1))
         return self.output
     
-    def backward(self, dZ):
+    def backward(self, dZ, learning_rate=None):  # ADD learning_rate parameter
         grad = np.where(self.output > 0, 1, self.output + self.alpha)
         return dZ * grad
 
@@ -84,7 +83,7 @@ class Swish:
         self.output = X * self.sigmoid
         return self.output
     
-    def backward(self, dZ):
+    def backward(self, dZ, learning_rate=None):  # ADD learning_rate parameter
         grad = self.output + self.sigmoid * (1 - self.output)
         return dZ * grad
 
@@ -102,9 +101,9 @@ class Sigmoid:
         self.output = 1 / (1 + np.exp(-X))
         return self.output
     
-    def backward(self, dZ):
+    def backward(self, dZ, learning_rate=None):  # ADD learning_rate parameter
         return dZ * self.output * (1 - self.output)
-
+    
 class Softmax:
     """
     Softmax activation function for multi-class classification.
@@ -119,8 +118,7 @@ class Softmax:
         self.output = exp_X / np.sum(exp_X, axis=1, keepdims=True)
         return self.output
     
-    def backward(self, dZ):
-        # Usually combined with CrossEntropyLoss for efficiency
+    def backward(self, dZ, learning_rate=None):  # ADD learning_rate parameter
         return dZ
 
 class Tanh:
@@ -136,5 +134,5 @@ class Tanh:
         self.output = np.tanh(X)
         return self.output
     
-    def backward(self, dZ):
+    def backward(self, dZ, learning_rate=None):  # ADD learning_rate parameter
         return dZ * (1 - self.output ** 2)

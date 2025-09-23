@@ -3,7 +3,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import numpy as np
-from src.core.losses import MeanSquaredError, BinaryCrossEntropy, CrossEntropyLoss
+from visualife.core.losses import MeanSquaredError, BinaryCrossEntropy, CrossEntropyLoss
 
 def test_mean_squared_error():
     print("Testing Mean Squared Error...")
