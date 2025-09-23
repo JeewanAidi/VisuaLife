@@ -2,22 +2,26 @@ import numpy as np
 from visualife.core.engine import matrix_multiply, elementwise_multiply
 
 class Conv2D:
-    def __init__(self, num_filters, filter_size, stride=1, padding=0):
+    def __init__(self, num_filters, filter_size, stride=1, padding=0, input_channels=None):
         self.num_filters = num_filters
         self.filter_size = filter_size
         self.stride = stride
         self.padding = padding
+        self.input_channels = input_channels
         self.filters = None
         self.bias = None
         self.input = None
         self.output = None
+        self.d_filters = None
+        self.d_bias = None
         
     def initialize_parameters(self, input_channels):
-        """Initialize filters and bias"""
+        """Initialize filters and bias with proper shape"""
+        self.input_channels = input_channels
         # He initialization for ReLU
         scale = np.sqrt(2.0 / (self.filter_size * self.filter_size * input_channels))
-        self.filters = np.random.randn(self.num_filters, self.filter_size, self.filter_size, input_channels) * scale
-        self.bias = np.zeros((self.num_filters, 1))
+        self.filters = np.random.randn(self.filter_size, self.filter_size, input_channels, self.num_filters) * scale
+        self.bias = np.zeros((1, 1, 1, self.num_filters))
     
     def forward(self, X):
         """
@@ -30,9 +34,9 @@ class Conv2D:
         self.input = X
         batch_size, in_height, in_width, in_channels = X.shape
         
-        # Calculate output dimensions
-        out_height = (in_height - self.filter_size + 2 * self.padding) // self.stride + 1
-        out_width = (in_width - self.filter_size + 2 * self.padding) // self.stride + 1
+        # Calculate output dimensions - FIXED FORMULA
+        out_height = (in_height + 2 * self.padding - self.filter_size) // self.stride + 1
+        out_width = (in_width + 2 * self.padding - self.filter_size) // self.stride + 1
         
         # Initialize output
         self.output = np.zeros((batch_size, out_height, out_width, self.num_filters))
@@ -58,12 +62,12 @@ class Conv2D:
                         receptive_field = X_padded[i, vert_start:vert_end, horiz_start:horiz_end, :]
                         
                         # Perform convolution (element-wise multiplication and sum)
-                        conv_result = np.sum(receptive_field * self.filters[f])
-                        self.output[i, h, w, f] = conv_result + self.bias[f]
+                        conv_result = np.sum(receptive_field * self.filters[:, :, :, f])
+                        self.output[i, h, w, f] = conv_result + self.bias[0, 0, 0, f]
         
         return self.output
     
-    def backward(self, dZ, learning_rate=0.01):
+    def backward(self, dZ):
         """
         Backward pass for Conv2D layer
         dZ shape: (batch_size, out_height, out_width, num_filters)
@@ -73,16 +77,15 @@ class Conv2D:
         _, out_height, out_width, num_filters = dZ.shape
         
         # Initialize gradients
-        d_filters = np.zeros_like(self.filters)
-        d_bias = np.zeros_like(self.bias)
+        self.d_filters = np.zeros_like(self.filters)
+        self.d_bias = np.zeros_like(self.bias)
         dX = np.zeros_like(X)
         
-        # Apply padding if needed
+        # Apply padding if needed for dX
         if self.padding > 0:
             X_padded = np.pad(X, ((0, 0), (self.padding, self.padding), 
                                  (self.padding, self.padding), (0, 0)), mode='constant')
-            dX_padded = np.pad(dX, ((0, 0), (self.padding, self.padding), 
-                                  (self.padding, self.padding), (0, 0)), mode='constant')
+            dX_padded = np.zeros_like(X_padded)
         else:
             X_padded = X
             dX_padded = dX
@@ -99,10 +102,10 @@ class Conv2D:
                         
                         # Gradient for filters
                         receptive_field = X_padded[i, vert_start:vert_end, horiz_start:horiz_end, :]
-                        d_filters[f] += receptive_field * dZ[i, h, w, f]
+                        self.d_filters[:, :, :, f] += receptive_field * dZ[i, h, w, f]
                         
                         # Gradient for input
-                        dX_padded[i, vert_start:vert_end, horiz_start:horiz_end, :] += self.filters[f] * dZ[i, h, w, f]
+                        dX_padded[i, vert_start:vert_end, horiz_start:horiz_end, :] += self.filters[:, :, :, f] * dZ[i, h, w, f]
         
         # Remove padding from dX_padded if needed
         if self.padding > 0:
@@ -110,14 +113,17 @@ class Conv2D:
         else:
             dX = dX_padded
         
-        # Gradient for bias
-        d_bias = np.sum(dZ, axis=(0, 1, 2)).reshape(-1, 1)
-        
-        # Update parameters
-        self.filters -= learning_rate * d_filters / batch_size
-        self.bias -= learning_rate * d_bias / batch_size
+        # Gradient for bias (sum over all dimensions except filters)
+        self.d_bias = np.sum(dZ, axis=(0, 1, 2)).reshape(1, 1, 1, -1)
         
         return dX
+    
+    def update(self, learning_rate):
+        """Update parameters using gradients"""
+        if self.d_filters is not None:
+            self.filters -= learning_rate * self.d_filters
+        if self.d_bias is not None:
+            self.bias -= learning_rate * self.d_bias
 
 class MaxPool2D:
     """Max Pooling Layer"""
@@ -132,11 +138,12 @@ class MaxPool2D:
         self.input = X
         batch_size, height, width, channels = X.shape
         
+        # Calculate output dimensions - FIXED FORMULA
         out_height = (height - self.pool_size) // self.stride + 1
         out_width = (width - self.pool_size) // self.stride + 1
         
         self.output = np.zeros((batch_size, out_height, out_width, channels))
-        self.mask = np.zeros_like(X)
+        self.mask = np.zeros_like(X, dtype=float)
         
         for i in range(batch_size):
             for h in range(out_height):
@@ -147,17 +154,20 @@ class MaxPool2D:
                         horiz_start = w * self.stride
                         horiz_end = horiz_start + self.pool_size
                         
-                        window = X[i, vert_start:vert_end, horiz_start:horiz_end, c]
-                        self.output[i, h, w, c] = np.max(window)
-                        
-                        # Create mask for backward pass
-                        max_pos = np.unravel_index(np.argmax(window), window.shape)
-                        self.mask[i, vert_start + max_pos[0], horiz_start + max_pos[1], c] = 1
+                        # Ensure we don't go out of bounds
+                        if vert_end <= height and horiz_end <= width:
+                            window = X[i, vert_start:vert_end, horiz_start:horiz_end, c]
+                            if window.size > 0:  # Check if window is not empty
+                                self.output[i, h, w, c] = np.max(window)
+                                
+                                # Create mask for backward pass
+                                max_pos = np.unravel_index(np.argmax(window), window.shape)
+                                self.mask[i, vert_start + max_pos[0], horiz_start + max_pos[1], c] = 1
         
         return self.output
     
-    def backward(self, dZ, learning_rate=None):
-        dX = np.zeros_like(self.input)
+    def backward(self, dZ):
+        dX = np.zeros_like(self.input, dtype=float)  
         batch_size, out_height, out_width, channels = dZ.shape
         
         for i in range(batch_size):
@@ -170,9 +180,10 @@ class MaxPool2D:
                         horiz_end = horiz_start + self.pool_size
                         
                         # Route gradient to the max position
-                        dX[i, vert_start:vert_end, horiz_start:horiz_end, c] += (
-                            self.mask[i, vert_start:vert_end, horiz_start:horiz_end, c] * dZ[i, h, w, c]
-                        )
+                        if vert_end <= self.input.shape[1] and horiz_end <= self.input.shape[2]:
+                            dX[i, vert_start:vert_end, horiz_start:horiz_end, c] += (
+                                self.mask[i, vert_start:vert_end, horiz_start:horiz_end, c] * dZ[i, h, w, c]
+                            )
         
         return dX
 
@@ -185,5 +196,5 @@ class Flatten:
         self.input_shape = X.shape
         return X.reshape(X.shape[0], -1)
     
-    def backward(self, dZ, learning_rate=None):
+    def backward(self, dZ):
         return dZ.reshape(self.input_shape)

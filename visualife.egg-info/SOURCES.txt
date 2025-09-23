@@ -5,6 +5,7 @@ tests/mlp_model_test_mnist.py
 tests/run_all_tests.py
 tests/test_activations.py
 tests/test_callbacks.py
+tests/test_convolutional.py
 tests/test_engine.py
 tests/test_integration.py
 tests/test_layers.py
